@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Tizzup Dashboard</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+  <style>
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; 
+      max-width: 600px; 
+      margin: auto; 
+      padding: 20px; 
+      line-height: 1.6;
+      background-color: #f5f5f5;
+    }
+    
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    h1 {
+      color: #333;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    h2 {
+      color: #555;
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 5px;
+    }
+    
+    input, button { 
+      margin: 6px 0; 
+      padding: 12px; 
+      width: 100%; 
+      box-sizing: border-box;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    
+    button:hover {
+      background-color: #0056b3;
+    }
+    
+    button:disabled {
+      background-color: #6c757d;
+      cursor: not-allowed;
+    }
+    
+    .quiz-item { 
+      padding: 10px 0; 
+      border-bottom: 1px solid #eee; 
+    }
+    
+    .quiz-item:last-child {
+      border-bottom: none;
+    }
+    
+    #auth-status {
+      font-weight: bold;
+      margin: 15px 0;
+      padding: 10px;
+      border-radius: 5px;
+      text-align: center;
+    }
+    
+    .logged-in {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .not-verified {
+      background-color: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+    }
+    
+    .not-logged-in {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .section {
+      margin: 30px 0;
+    }
+    
+    .message {
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 5px;
+      font-weight: 500;
+    }
+    
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .warning {
+      background-color: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+    }
+    
+    .verification-notice {
+      background-color: #e2e3e5;
+      color: #383d41;
+      border: 1px solid #d6d8db;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 5px;
+    }
+    
+    .small-button {
+      width: auto;
+      display: inline-block;
+      margin: 5px;
+      padding: 8px 15px;
+      font-size: 14px;
+    }
+    
+    .button-container {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+    .quiz-button {
+      flex: 1;
+      margin: 0;
+    }
+    
+    .delete-button {
+      width: 80px;
+      background-color: #dc3545;
+      margin: 0;
+    }
+    
+    .delete-button:hover {
+      background-color: #c82333;
+    }
+    
+    .loading {
+      text-align: center;
+      color: #6c757d;
+      font-style: italic;
+    }
+    
+    .upload-progress {
+      margin-top: 10px;
+    }
+    
+    .password-requirements {
+      font-size: 12px;
+      color: #6c757d;
+      margin-top: -4px;
+      margin-bottom: 10px;
+    }
+    
+    .file-info {
+      font-size: 12px;
+      color: #6c757d;
+      margin-top: -4px;
+      margin-bottom: 10px;
+    }
+    
+    @media (max-width: 480px) {
+      body {
+        padding: 10px;
+      }
+      
+      .container {
+        padding: 20px;
+      }
+      
+      .button-container {
+        flex-direction: column;
+      }
+      
+      .delete-button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎯 Tizzup Dashboard</h1>
+
+    <div id="auth-section" class="section">
+      <input type="email" id="email" placeholder="Email Address" />
+      <input type="password" id="password" placeholder="Password" />
+      <div class="password-requirements">Password must be at least 8 characters with uppercase, lowercase, and number</div>
+      <button onclick="signup()">Create Account</button>
+      <button onclick="login()">Sign In</button>
+      <button onclick="logout()" style="background-color: #6c757d;">Sign Out</button>
+      <div id="auth-status" class="not-logged-in">Not signed in</div>
+      <div id="auth-messages"></div>
+      
+      <!-- Email verification section -->
+      <div id="verification-section" class="verification-notice" style="display:none;">
+        <p><strong>📧 Email Verification Required</strong></p>
+        <p>Please check your email inbox for the verification link, or request a new one:</p>
+        <button onclick="resendVerification()" class="small-button">Resend Verification Email</button>
+        <button onclick="checkVerificationStatus()" class="small-button">I've Verified My Email</button>
+        <div id="verification-messages"></div>
+      </div>
+    </div>
+
+    <div id="upload-section" class="section" style="display:none;">
+      <h2>📤 Upload New Quiz</h2>
+      <input type="text" id="quizTitle" placeholder="Enter Quiz Title" />
+      <input type="file" id="fileInput" accept=".xlsx,.xls" />
+      <div class="file-info">Accepted: Excel files (.xlsx, .xls) • Max size: 10MB</div>
+      <button onclick="uploadFile()">Upload Excel File</button>
+      <div id="upload-progress"></div>
+    </div>
+
+    <div id="quiz-list" class="section" style="display:none;">
+      <h2>📋 Your Quiz Library</h2>
+      <div id="quizContainer" class="loading">Loading your quizzes...</div>
+    </div>
+  </div>
+
+  <script src="firebase-config.js"></script>
+  <script>
+    // Initialize Firebase services
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    // Get DOM elements
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const fileInput = document.getElementById('fileInput');
+    const quizTitleInput = document.getElementById('quizTitle');
+    const authMessages = document.getElementById('auth-messages');
+    const verificationSection = document.getElementById('verification-section');
+    const verificationMessages = document.getElementById('verification-messages');
+    const uploadProgress = document.getElementById('upload-progress');
+
+    // Debug Firebase connection
+    console.log('Firebase initialized successfully');
+    console.log('Storage bucket:', firebase.app().options.storageBucket);
+
+    // Helper function to display messages
+    function showMessage(element, message, type = 'error') {
+      element.innerHTML = `<div class="message ${type}">${message}</div>`;
+      if (type === 'success') {
+        setTimeout(() => {
+          element.innerHTML = '';
+        }, 5000);
+      }
+    }
+
+    // Email validation helper
+    function isValidEmail(email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    }
+
+    // Password validation helper
+    function isStrongPassword(password) {
+      // At least 8 characters, 1 uppercase, 1 lowercase, 1 number
+      const hasMinLength = password.length >= 8;
+      const hasUpperCase = /[A-Z]/.test(password);
+      const hasLowerCase = /[a-z]/.test(password);
+      const hasNumber = /[0-9]/.test(password);
+      
+      return hasMinLength && hasUpperCase && hasLowerCase && hasNumber;
+    }
+
+    // Authentication state observer
+    auth.onAuthStateChanged(user => {
+      const statusEl = document.getElementById("auth-status");
+      
+      if (user && user.emailVerified) {
+        // User is logged in and email is verified
+        statusEl.innerText = `✅ Signed in as ${user.email}`;
+        statusEl.className = "logged-in";
+        document.getElementById("upload-section").style.display = "block";
+        document.getElementById("quiz-list").style.display = "block";
+        verificationSection.style.display = "none";
+        authMessages.innerHTML = '';
+        loadQuizzes();
+      } else if (user && !user.emailVerified) {
+        // User is logged in but email is not verified
+        statusEl.innerText = `⚠️ Signed in as ${user.email} (Email not verified)`;
+        statusEl.className = "not-verified";
+        document.getElementById("upload-section").style.display = "none";
+        document.getElementById("quiz-list").style.display = "none";
+        verificationSection.style.display = "block";
+        showMessage(authMessages, "Please verify your email to access all features.", 'warning');
+      } else {
+        // User is not logged in
+        statusEl.innerText = "Not signed in";
+        statusEl.className = "not-logged-in";
+        document.getElementById("upload-section").style.display = "none";
+        document.getElementById("quiz-list").style.display = "none";
+        verificationSection.style.display = "none";
+        authMessages.innerHTML = '';
+      }
+    });
+
+    function signup() { 
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+      
+      if (!email || !password) {
+        showMessage(authMessages, "Please enter both email and password", 'error');
+        return;
+      }
+
+      if (!isValidEmail(email)) {
+        showMessage(authMessages, "Please enter a valid email address", 'error');
+        return;
+      }
+
+      if (!isStrongPassword(password)) {
+        showMessage(authMessages, "Password must be at least 8 characters and include uppercase, lowercase, and a number", 'error');
+        return;
+      }
+
+      const signupBtn = document.querySelector('button[onclick="signup()"]');
+      signupBtn.disabled = true;
+      signupBtn.textContent = "Creating Account...";
+
+      auth.createUserWithEmailAndPassword(email, password)
+        .then(userCredential => {
+          const user = userCredential.user;
+          return user.sendEmailVerification();
+        })
+        .then(() => {
+          return auth.signOut();
+        })
+        .then(() => {
+          showMessage(authMessages, 
+            "<strong>Account created successfully!</strong><br>" +
+            "Please check your email inbox and click the verification link before signing in.<br>" +
+            "<em>Check your spam folder if you don't see the email.</em>", 
+            'success'
+          );
+          
+          emailInput.value = '';
+          passwordInput.value = '';
+        })
+        .catch(error => {
+          let errorMessage = 'Account creation failed. Please try again.';
+          
+          switch(error.code) {
+            case 'auth/email-already-in-use':
+              errorMessage = 'This email is already registered. Please use a different email or try signing in.';
+              break;
+            case 'auth/invalid-email':
+              errorMessage = 'Please enter a valid email address.';
+              break;
+            case 'auth/weak-password':
+              errorMessage = 'Password is too weak. Please choose a stronger password.';
+              break;
+            case 'auth/network-request-failed':
+              errorMessage = 'Network error. Please check your connection and try again.';
+              break;
+          }
+          
+          showMessage(authMessages, errorMessage, 'error');
+          console.error('Sign up error:', error);
+        })
+        .finally(() => {
+          signupBtn.disabled = false;
+          signupBtn.textContent = "Create Account";
+        });
+    }
+
+    function login() { 
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+      
+      if (!email || !password) {
+        showMessage(authMessages, "Please enter both email and password", 'error');
+        return;
+      }
+
+      if (!isValidEmail(email)) {
+        showMessage(authMessages, "Please enter a valid email address", 'error');
+        return;
+      }
+
+      const loginBtn = document.querySelector('button[onclick="login()"]');
+      loginBtn.disabled = true;
+      loginBtn.textContent = "Signing In...";
+
+      auth.signInWithEmailAndPassword(email, password)
+        .then(userCredential => {
+          const user = userCredential.user;
+          
+          if (!user.emailVerified) {
+            showMessage(authMessages, 
+              "<strong>Email not verified!</strong><br>" +
+              "Please check your email and click the verification link. You can resend it below.", 
+              'warning'
+            );
+            verificationSection.style.display = "block";
+            return;
+          }
+          
+          showMessage(authMessages, "Sign in successful!", 'success');
+          emailInput.value = '';
+          passwordInput.value = '';
+        })
+        .catch(error => {
+          let errorMessage = 'Sign in failed. Please check your email and password.';
+          
+          switch(error.code) {
+            case 'auth/user-not-found':
+              errorMessage = 'No account found with this email. Please create an account first.';
+              break;
+            case 'auth/wrong-password':
+              errorMessage = 'Incorrect password. Please try again.';
+              break;
+            case 'auth/invalid-email':
+              errorMessage = 'Please enter a valid email address.';
+              break;
+            case 'auth/too-many-requests':
+              errorMessage = 'Too many failed attempts. Please try again later or reset your password.';
+              break;
+            case 'auth/network-request-failed':
+              errorMessage = 'Network error. Please check your connection and try again.';
+              break;
+            case 'auth/invalid-credential':
+              errorMessage = 'Invalid credentials. Please check your email and password.';
+              break;
+          }
+          
+          showMessage(authMessages, errorMessage, 'error');
+          verificationSection.style.display = "none";
+          console.error('Sign in error:', error);
+        })
+        .finally(() => {
+          loginBtn.disabled = false;
+          loginBtn.textContent = "Sign In";
+        });
+    }
+
+    function logout() { 
+      auth.signOut()
+        .then(() => {
+          emailInput.value = '';
+          passwordInput.value = '';
+          document.getElementById("quizContainer").innerHTML = '';
+          showMessage(authMessages, "Signed out successfully", 'success');
+        })
+        .catch(error => {
+          console.error('Logout error:', error);
+          showMessage(authMessages, "Error signing out. Please try again.", 'error');
+        });
+    }
+
+    function checkVerificationStatus() {
+      if (!auth.currentUser) {
+        showMessage(verificationMessages, "Please sign in first to check verification status.", 'error');
+        return;
+      }
+
+      const checkBtn = document.querySelector('button[onclick="checkVerificationStatus()"]');
+      checkBtn.disabled = true;
+      checkBtn.textContent = "Checking...";
+
+      auth.currentUser.reload()
+        .then(() => {
+          if (auth.currentUser.emailVerified) {
+            showMessage(verificationMessages, "Email verified successfully! Reloading...", 'success');
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
+          } else {
+            showMessage(verificationMessages, "Email not yet verified. Please check your inbox and click the verification link.", 'warning');
+          }
+        })
+        .catch(error => {
+          console.error('Error checking verification:', error);
+          showMessage(verificationMessages, "Error checking verification status. Please try again.", 'error');
+        })
+        .finally(() => {
+          checkBtn.disabled = false;
+          checkBtn.textContent = "I've Verified My Email";
+        });
+    }
+
+    function resendVerification() {
+      if (!auth.currentUser) {
+        showMessage(verificationMessages, "Please sign in first to resend verification email.", 'error');
+        return;
+      }
+
+      const resendBtn = document.querySelector('button[onclick="resendVerification()"]');
+      resendBtn.disabled = true;
+      resendBtn.textContent = "Sending...";
+
+      auth.currentUser.sendEmailVerification()
+        .then(() => {
+          showMessage(verificationMessages, "Verification email sent! Please check your inbox (and spam folder).", 'success');
+        })
+        .catch(error => {
+          let errorMessage = "Failed to resend verification email.";
+          
+          if (error.code === 'auth/too-many-requests') {
+            errorMessage = "Too many requests. Please wait a few minutes before trying again.";
+          }
+          
+          showMessage(verificationMessages, errorMessage, 'error');
+          console.error('Resend verification error:', error);
+        })
+        .finally(() => {
+          resendBtn.disabled = false;
+          resendBtn.textContent = "Resend Verification Email";
+        });
+    }
+
+    function uploadFile() {
+      const file = fileInput.files[0];
+      const title = quizTitleInput.value.trim();
+      
+      if (!file || !title) {
+        showMessage(uploadProgress, "Please provide both a file and title.", 'error');
+        return;
+      }
+
+      if (!auth.currentUser) {
+        showMessage(uploadProgress, "Please sign in first.", 'error');
+        return;
+      }
+
+      if (!auth.currentUser.emailVerified) {
+        showMessage(uploadProgress, "Please verify your email before uploading files.", 'error');
+        return;
+      }
+
+      // Check file type
+      const allowedTypes = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 
+                           'application/vnd.ms-excel'];
+      const fileExtension = file.name.split('.').pop().toLowerCase();
+      
+      if (!allowedTypes.includes(file.type) && !['xlsx', 'xls'].includes(fileExtension)) {
+        showMessage(uploadProgress, "Please select an Excel file (.xlsx or .xls)", 'error');
+        return;
+      }
+
+      // Check file size (10MB limit)
+      const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+      if (file.size > maxSize) {
+        showMessage(uploadProgress, "File size must be less than 10MB. Your file is " + (file.size / 1024 / 1024).toFixed(2) + "MB", 'error');
+        return;
+      }
+
+      const userId = auth.currentUser.uid;
+      const timestamp = Date.now();
+      const fileName = `${timestamp}_${file.name}`;
+      const storageRef = storage.ref().child(`users/${userId}/${fileName}`);
+      
+      // Show upload progress
+      const uploadButton = document.querySelector('button[onclick="uploadFile()"]');
+      uploadButton.disabled = true;
+      uploadButton.textContent = "Uploading...";
+      uploadProgress.innerHTML = '';
+
+      console.log("Uploading to path:", `users/${userId}/${fileName}`);
+
+      const uploadTask = storageRef.put(file);
+
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          console.log('Upload is ' + progress + '% done');
+          uploadButton.textContent = `Uploading... ${Math.round(progress)}%`;
+          uploadProgress.innerHTML = `<div class="message warning">Upload progress: ${Math.round(progress)}%</div>`;
+        }, 
+        (error) => {
+          console.error("Upload error:", error);
+          let errorMessage = "Upload failed: ";
+          
+          switch (error.code) {
+            case 'storage/unauthorized':
+              errorMessage += "Not authorized to upload. Please check your authentication.";
+              break;
+            case 'storage/canceled':
+              errorMessage += "Upload was canceled.";
+              break;
+            case 'storage/quota-exceeded':
+              errorMessage += "Storage quota exceeded. Please contact support.";
+              break;
+            case 'storage/unknown':
+              errorMessage += "Unknown error occurred. Please try again.";
+              break;
+            default:
+              errorMessage += error.message;
+          }
+          
+          showMessage(uploadProgress, errorMessage, 'error');
+          uploadButton.disabled = false;
+          uploadButton.textContent = "Upload Excel File";
+        }, 
+        () => {
+          uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
+            console.log('File available at', downloadURL);
+            
+            return db.collection("users").doc(userId).collection("quizzes").add({ 
+              title: title,
+              url: downloadURL,
+              fileName: fileName,
+              fileSize: file.size,
+              timestamp: new Date(),
+              uploadDate: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          }).then(() => { 
+            showMessage(uploadProgress, "Upload successful! 🎉", 'success');
+            fileInput.value = ""; 
+            quizTitleInput.value = ""; 
+            loadQuizzes(); 
+          }).catch((error) => {
+            console.error("Error saving to database:", error);
+            showMessage(uploadProgress, "File uploaded but failed to save details: " + error.message, 'error');
+          }).finally(() => {
+            uploadButton.disabled = false;
+            uploadButton.textContent = "Upload Excel File";
+          });
+        }
+      );
+    }
+
+    function loadQuizzes() {
+      if (!auth.currentUser || !auth.currentUser.emailVerified) {
+        console.log("No verified user logged in");
+        return;
+      }
+
+      const userId = auth.currentUser.uid;
+      const container = document.getElementById("quizContainer");
+      container.innerHTML = '<div class="loading">Loading your quizzes...</div>';
+
+      db.collection("users").doc(userId).collection("quizzes")
+        .orderBy("timestamp", "desc")
+        .get()
+        .then(snapshot => {
+          container.innerHTML = "";
+          
+          if (snapshot.empty) {
+            container.innerHTML = "<p>No quizzes uploaded yet. Upload your first quiz above! 🎯</p>";
+            return;
+          }
+
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            const row = document.createElement("div");
+            row.className = "quiz-item";
+
+            const buttonContainer = document.createElement("div");
+            buttonContainer.className = "button-container";
+
+            const btn = document.createElement("button");
+            btn.textContent = data.title || "Untitled quiz";
+            btn.className = "quiz-button";
+
+            btn.addEventListener("click", () => {
+              if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.quizSelected) {
+                // iOS app integration
+                window.webkit.messageHandlers.quizSelected.postMessage({
+                  url: data.url,
+                  title: data.title || "Untitled",
+                  id: doc.id
+                });
+              } else {
+                // Web fallback - open the file
+                window.open(data.url, '_blank');
+              }
+            });
+
+            const deleteBtn = document.createElement("button");
+            deleteBtn.textContent = "Delete";
+            deleteBtn.className = "delete-button";
+            deleteBtn.onclick = () => deleteQuiz(doc.id, data.fileName);
+
+            buttonContainer.appendChild(btn);
+            buttonContainer.appendChild(deleteBtn);
+            row.appendChild(buttonContainer);
+            container.appendChild(row);
+          });
+        })
+        .catch(err => { 
+          console.error("Error loading quizzes:", err); 
+          container.innerHTML = `<div class="message error">Failed to load quizzes: ${err.message}</div>`; 
+        });
+    }
+
+    function deleteQuiz(docId, fileName) {
+      if (!confirm("Are you sure you want to delete this quiz? This action cannot be undone.")) {
+        return;
+      }
+
+      if (!auth.currentUser || !auth.currentUser.emailVerified) {
+        alert("Please verify your email before deleting files.");
+        return;
+      }
+
+      const userId = auth.currentUser.uid;
+      const container = document.getElementById("quizContainer");
+
+      db.collection("users").doc(userId).collection("quizzes").doc(docId).delete()
+        .then(() => {
+          if (fileName) {
+            return storage.ref().child(`users/${userId}/${fileName}`).delete();
+          }
+        })
+        .then(() => {
+          showMessage(container, "Quiz deleted successfully!", 'success');
+          setTimeout(() => {
+            loadQuizzes();
+          }, 1500);
+        })
+        .catch(err => {
+          console.error("Error deleting quiz:", err);
+          showMessage(container, "Error deleting quiz: " + err.message, 'error');
+        });
+    }
+
+    // Clear file input when a file is selected (for better UX)
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files[0]) {
+        const file = e.target.files[0];
+        const fileSize = (file.size / 1024 / 1024).toFixed(2);
+        console.log(`File selected: ${file.name} (${fileSize}MB)`);
+      }
+    });
+  </script>
+</body>
+</html>
